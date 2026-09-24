@@ -37,8 +37,19 @@ class SesionRepository(private val api: AvisosApi, private val store: SesionStor
         store.guardar(api.register(credenciales).toSesion())
     }
 
+    /** Primero se borra lo local: aunque no haya red, salir siempre funciona. */
     suspend fun salir() {
+        val actual = store.sesion.first()
         store.borrar()
+        if (actual != null) {
+            try {
+                api.logout(RefreshBody(actual.refreshToken))
+            } catch (e: IOException) {
+                // Sin red no se avisa al servidor; el refresh token expira solo en 7 días.
+            } catch (e: HttpException) {
+                // Ya estaba revocado, o nunca existió. Salir igual se logró.
+            }
+        }
     }
 
     /** Para la capa de red, que corre en su propio hilo y no puede suspender. */
