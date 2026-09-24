@@ -27,6 +27,8 @@ object Network {
     fun crearApi(interceptor: Interceptor? = null, authenticator: Authenticator? = null): AvisosApi {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
+            // Con Level.HEADERS o BODY, sin esta línea el token sale en el Logcat.
+            redactHeader("Authorization")
         }
 
         val client = OkHttpClient.Builder().apply {
