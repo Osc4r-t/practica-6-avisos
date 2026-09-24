@@ -6,8 +6,11 @@ import kotlinx.coroutines.runBlocking
 import mx.tec.avisos.data.local.SesionStore
 import mx.tec.avisos.data.remote.AvisosApi
 import mx.tec.avisos.data.remote.Credenciales
+import mx.tec.avisos.data.remote.RefreshBody
 import mx.tec.avisos.data.remote.toSesion
 import mx.tec.avisos.domain.Sesion
+import retrofit2.HttpException
+import java.io.IOException
 
 /**
  * La única puerta a la sesión. Hacia arriba habla de `Sesion`; hacia abajo,
@@ -40,4 +43,26 @@ class SesionRepository(private val api: AvisosApi, private val store: SesionStor
 
     /** Para la capa de red, que corre en su propio hilo y no puede suspender. */
     fun tokenActual(): String? = runBlocking { store.sesion.first() }?.accessToken
+
+    fun refrescarToken(): String? = runBlocking { refrescar() }
+
+    /**
+     * Cambia el refresh token por un par nuevo. Si el servidor dice que ese
+     * refresh ya no sirve, la sesión se acabó: se borra, y la UI vuelve sola
+     * al login porque el Flow emite null.
+     */
+    private suspend fun refrescar(): String? {
+        val actual = store.sesion.first() ?: return null
+        return try {
+            val nueva = api.refresh(RefreshBody(actual.refreshToken)).toSesion()
+            store.guardar(nueva)
+            nueva.accessToken
+        } catch (e: HttpException) {
+            if (e.code() == 401) store.borrar()
+            null
+        } catch (e: IOException) {
+            // Sin red: la sesión sigue guardada, solo falló este intento.
+            null
+        }
+    }
 }
