@@ -1,8 +1,10 @@
 package mx.tec.avisos
 
 import android.app.Application
+import android.content.Context
 import mx.tec.avisos.data.AvisosRepository
 import mx.tec.avisos.data.SesionRepository
+import mx.tec.avisos.data.local.SesionStore
 import mx.tec.avisos.data.remote.AuthInterceptor
 import mx.tec.avisos.data.remote.AvisosApi
 import mx.tec.avisos.data.remote.Network
@@ -15,13 +17,15 @@ import mx.tec.avisos.data.remote.Network
  * el interceptor recibe una FUNCIÓN que pide el token, no el repositorio.
  * Nadie llama a esa función hasta que sale la primera petición.
  */
-class AppContainer {
+class AppContainer(context: Context) {
+
+    private val sesionStore = SesionStore(context)
 
     private val api: AvisosApi by lazy {
         Network.crearApi(interceptor = AuthInterceptor { sesionRepository.tokenActual() })
     }
 
-    val sesionRepository: SesionRepository by lazy { SesionRepository(api) }
+    val sesionRepository: SesionRepository by lazy { SesionRepository(api, sesionStore) }
 
     val avisosRepository: AvisosRepository by lazy { AvisosRepository(api) }
 }
@@ -34,6 +38,6 @@ class AvisosApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        container = AppContainer()
+        container = AppContainer(this)
     }
 }
