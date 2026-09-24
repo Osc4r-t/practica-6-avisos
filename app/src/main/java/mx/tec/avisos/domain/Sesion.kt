@@ -29,6 +29,6 @@ data class Sesion(
 ) {
     fun segundosRestantes(ahora: Long = System.currentTimeMillis() / 1000): Long = expiraEn - ahora
 
-    /** La regla de autorización, vista desde el cliente. El servidor la repite. */
-    val puedePublicar: Boolean get() = rol == Rol.PROFESOR
+    // EXPERIMENTO C2: la app "decide" que todos pueden publicar. ¿Y el servidor?
+    val puedePublicar: Boolean get() = true
 }
